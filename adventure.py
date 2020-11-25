@@ -17,10 +17,10 @@ import pandas as pd
 
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 800
-SCREEN_TITLE = "Move with a Sprite Animation Example"
+SCREEN_TITLE = "Weihnachtstombola 2020 - es kann nur eine(r) geben. Plus neun anderen."
 
 COIN_SCALE = 0.5
-DEBUG_COIN_COUNT = 10
+DEBUG_COIN_COUNT = 15
 CHARACTER_SCALING = 1
 
 COIN_DIAMETER = 10
@@ -135,7 +135,7 @@ class GameOverView(arcade.View):
         arcade.set_viewport(0, SCREEN_WIDTH - 1, 0, SCREEN_HEIGHT - 1)
         """ Load music and set flag that currently no music playing"""
         self.sound_song = arcade.load_sound("./resources/sounds/Tarannos/Radar-MasterEffects.wav")
-        self.music_playing = False
+        self.music_playing = Falseq
 
     def on_draw(self):
         """ Draw this view """
@@ -153,6 +153,54 @@ class GameOverView(arcade.View):
         arcade.stop_sound(self.sound_song)
         self.window.close()
         """"exit(0)"""
+
+class WinnersView(arcade.View):
+    """ View to show winners """
+
+    def __init__(self, winners):
+        """ Set up the game and initialize the variables. """
+        # super().__init__(width, height, title)
+        super().__init__()
+        self.winners = winners
+
+        """ Load music and set flag that currently no music playing"""
+        self.sound_song = arcade.load_sound(
+            "./resources/sounds/Dark Fantasy Studio- Superheroes/mp3/Dark Fantasy Studio- Iron knight (seamless).mp3")
+        self.music_playing = False
+
+    def on_show(self):
+        """ This is run once when we switch to this view """
+        arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
+
+        # Reset the viewport, necessary if we have a scrolling game and we need
+        # to reset the viewport back to the start so we can see what we draw.
+        arcade.set_viewport(0, SCREEN_WIDTH - 1, 0, SCREEN_HEIGHT - 1)
+
+    def on_draw(self):
+        """ Draw this view """
+        arcade.start_render()
+        arcade.draw_text("Winners Screen", SCREEN_WIDTH / 2, 14 * SCREEN_HEIGHT / 16,
+                         arcade.color.WHITE, font_size=50, anchor_x="center")
+
+        i = 12
+        for winner in self.winners:
+            arcade.draw_text(winner, SCREEN_WIDTH / 8, i * SCREEN_HEIGHT / 16,
+                         arcade.color.WHITE, font_size=20, anchor_x="left")
+            i -= 1
+
+        arcade.draw_text("Click to advance", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 8,
+                         arcade.color.WHITE, font_size=20, anchor_x="center")
+
+        """ When drawing for the first time, play sound"""
+        if not self.music_playing:
+            arcade.play_sound(self.sound_song)
+            self.music_playing = True
+
+    def on_mouse_press(self, _x, _y, _button, _modifiers):
+
+        """If the user presses the mouse button, end the game. """
+        arcade.stop_sound(self.sound_song)
+        self.window.close()
 
 
 class InstructionView(arcade.View):
@@ -233,6 +281,8 @@ class GameView(arcade.View):
         """ Load music and set flag that currently no music playing"""
         self.sound_song = arcade.load_sound(
             "./resources/sounds/Dark Fantasy Studio- PIXEL Faster stronger harder/mp3/5- Dark Fantasy Studio - Demolition race.mp3")
+        self.sound_song = arcade.load_sound(
+            "./resources/sounds/Tarannos/She-Dont-Believe-In-Love.mp3")
         self.music_playing = False
 
         self.df_lose = df_lose
@@ -353,10 +403,11 @@ class GameView(arcade.View):
 
         """Stop when there are 10 coins left (i.e. 10 winners)"""
         if len(self.coin_list) <= 10:
+            winners = [obj.name for obj in self.coin_list]
             arcade.stop_sound(self.sound_song)
-            game_over_view = GameOverView()
+            next_view = WinnersView(winners)
             self.window.set_mouse_visible(True)
-            self.window.show_view(game_over_view)
+            self.window.show_view(next_view)
 
 
 def main():
