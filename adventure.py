@@ -9,6 +9,7 @@ If Python and Arcade are installed, this example can be run from the command lin
 python -m arcade.examples.sprite_move_animation
 """
 import argparse
+import math
 import random
 import sys
 
@@ -20,6 +21,7 @@ SCREEN_HEIGHT = 800
 SCREEN_TITLE = "Weihnachtstombola 2020 - es kann nur eine(r) geben. Plus neun anderen."
 
 COIN_SCALE = 0.5
+# DEBUG_COIN_COUNT must be more than 10, otherwise game screen is never shown
 DEBUG_COIN_COUNT = 15
 CHARACTER_SCALING = 1
 
@@ -28,6 +30,7 @@ COIN_DIAMETER = 10
 # How fast to move, and how fast to run the animation
 MOVEMENT_SPEED = 5
 UPDATES_PER_FRAME = 5
+MABEL_SPEED = 5
 
 # Constants used to track if the player is facing left or right
 RIGHT_FACING = 0
@@ -35,7 +38,6 @@ LEFT_FACING = 1
 
 
 def is_debug():
-
     if getattr(sys, 'gettrace', None) is None:
         print('No sys.gettrace')
         return False
@@ -76,6 +78,11 @@ class PlayerCharacter(arcade.Sprite):
         self.cur_texture = 0
 
         self.scale = CHARACTER_SCALING
+
+        # Generate a random angle between -180 and 180 degrees (-pi and pi radians)
+        theta = random.randint(-180, 180)
+        self.change_x = MABEL_SPEED * math.sin(math.radians(theta))
+        self.change_y = MABEL_SPEED * math.cos(math.radians(theta))
 
         # Adjust the collision box. Default includes too much empty space
         # side-to-side. Box is centered at sprite center, (0, 0)
@@ -121,6 +128,58 @@ class PlayerCharacter(arcade.Sprite):
         direction = self.character_face_direction
         self.texture = self.walk_textures[frame][direction]
 
+    def update(self, delta_time: float = 1 / 60):
+
+        # Generate a random angle between -90 and 90 degrees (-pi/2 and pi/2 radians)
+        theta = random.randint(-90, 90)
+        x_changed = False
+
+        print(f'Theta  :{theta:10}  x:{self.change_x:+12.10f} y:{self.change_y:+12.10f} l:{self.left:+12.10f} r:{self.right:+12.10f} t:{self.top:+12.10f} b:{self.bottom:+12.10f}')
+
+        # Change direction if end of screen
+        if self.left < COIN_DIAMETER:
+            # Hit left edge of screen. X velocity must be set positive, y velocity +ve or -ve.
+            # Angle between -90 and 90 (quadrant 1 and 4, ⊃)
+            # add nothing to the angle
+            self.change_x = MABEL_SPEED * math.cos(math.radians(theta))
+            self.change_y = MABEL_SPEED * math.sin(math.radians(theta))
+            x_changed = True
+            print("Left")
+        elif self.right > SCREEN_WIDTH - COIN_DIAMETER:
+            # Hit right edge of screen. X velocity must be set negative, y velocity +ve or -ve.
+            # Angle between 90 and -90 (quadrant 2 and 3, ⊂)
+            # Add 180 degrees to the angle
+            self.change_x = MABEL_SPEED * math.cos(math.radians(theta + 180))
+            self.change_y = MABEL_SPEED * math.sin(math.radians(theta + 180))
+            x_changed = True
+            print("Right")
+
+        x_changed = False
+
+        if self.top > SCREEN_HEIGHT - COIN_DIAMETER:
+            # Hit right edge of screen. Y velocity must be set negative, X velocity +ve or -ve.
+            # Angle between 180 and 0 (quadrant 3 and 4 ⋃)
+            # Subtract 90 degrees from the angle
+            print("Up")
+            if x_changed:
+                self.change_y = -1 * abs(self.change_y)
+            else:
+                self.change_x = MABEL_SPEED * math.cos(math.radians(theta - 90))
+                self.change_y = MABEL_SPEED * math.sin(math.radians(theta - 90))
+
+        elif self.bottom < COIN_DIAMETER:
+            # Hit bottom edge of screen. Y velocity must be set positive, X velocity +ve or -ve.
+            # Angle between 0 and 180 (quadrant 1 and 2, ⋂ )
+            # Add 90 degrees to the angle
+            print("Down")
+            if x_changed:
+                self.change_y = abs(self.change_y)
+            else:
+                self.change_x = MABEL_SPEED * math.cos(math.radians(theta + 90))
+                self.change_y = MABEL_SPEED * math.sin(math.radians(theta + 90))
+
+        super(PlayerCharacter, self).update()
+
 
 class GameOverView(arcade.View):
     """ View to show when game is over """
@@ -154,6 +213,7 @@ class GameOverView(arcade.View):
         self.window.close()
         """"exit(0)"""
 
+
 class WinnersView(arcade.View):
     """ View to show winners """
 
@@ -185,7 +245,7 @@ class WinnersView(arcade.View):
         i = 12
         for winner in self.winners:
             arcade.draw_text(winner, SCREEN_WIDTH / 8, i * SCREEN_HEIGHT / 16,
-                         arcade.color.WHITE, font_size=20, anchor_x="left")
+                             arcade.color.WHITE, font_size=20, anchor_x="left")
             i -= 1
 
         arcade.draw_text("Click to advance", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 8,
@@ -255,7 +315,6 @@ class InstructionView(arcade.View):
             self.music_playing = True
 
     def on_mouse_press(self, _x, _y, _button, _modifiers):
-
         """If the user presses the mouse button, start the game. """
         arcade.stop_sound(self.sound_song)
         next_view = GameView(self.df_lose)
@@ -304,6 +363,9 @@ class GameView(arcade.View):
         # Set up the player
         self.score = 0
         self.player = PlayerCharacter()
+        # self.player.velocity = (5,0)
+        self.player.change_x = MOVEMENT_SPEED
+        self.player.change_y = 0
 
         self.player.center_x = SCREEN_WIDTH // 2
         self.player.center_y = SCREEN_HEIGHT // 2
