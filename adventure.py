@@ -15,10 +15,17 @@ import sys
 
 import arcade
 import pandas as pd
+from pandas import DataFrame
 
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 800
 SCREEN_TITLE = "Weihnachtstombola 2020 - es kann nur eine(r) geben. Plus neun anderen."
+
+WINNERS_SOUND = "./resources/sounds/Dark Fantasy Studio- Superheroes/mp3/Dark Fantasy Studio- Iron knight (seamless).mp3"
+GAME_OVER_SOUND = "./resources/sounds/Tarannos/Radar-MasterEffects.wav"
+GAME_SOUND = "./resources/sounds/Dark Fantasy Studio- PIXEL Faster stronger harder/mp3/5- Dark Fantasy Studio - Demolition race.mp3"
+GAME_SOUND2 = "./resources/sounds/Tarannos/She-Dont-Believe-In-Love.mp3"
+INSTRUCTION_SOUND = "./resources/sounds/Dark Fantasy Studio- Superheroes/mp3/Dark Fantasy Studio- Iron knight (seamless).mp3"
 
 COIN_SCALE = 0.5
 # DEBUG_COIN_COUNT must be more than 10, otherwise game screen is never shown
@@ -30,7 +37,7 @@ COIN_DIAMETER = 10
 # How fast to move, and how fast to run the animation
 MOVEMENT_SPEED = 5
 UPDATES_PER_FRAME = 5
-MABEL_SPEED = 5
+MABEL_SPEED = MOVEMENT_SPEED
 
 # Constants used to track if the player is facing left or right
 RIGHT_FACING = 0
@@ -38,6 +45,12 @@ LEFT_FACING = 1
 
 
 def is_debug():
+    """
+    Returns true if running in debugger
+    Can be overwritten to be always true to speed testing
+    """
+
+    return True
     if getattr(sys, 'gettrace', None) is None:
         print('No sys.gettrace')
         return False
@@ -57,7 +70,41 @@ def load_texture_pair(filename):
     ]
 
 
+class MyConfig():
+    """
+    Configuration used by practically all views.
+    :param lose: data frame of player names and number of lives
+    :param winners: list of winners, filled at end of game
+    :return: none
+    """
+
+    def __init__(self, lose: DataFrame, winners: list = []):
+        self.lose = lose
+        self.winners = winners
+
+class MyView(arcade.View):
+    """
+    Standard members for the views.
+    :param config: configuration for the view (e.g. list of player names)
+    :param next_view: view to move on to when this one is done, None if end of game.
+    :return: none
+    """
+
+    def __init__(self, config: MyConfig, next_view=None):
+        super().__init__()
+        self.config = config
+        self.next_view = next_view
+
 class MyCoin(arcade.Sprite):
+    """
+    Standard members for the coins.
+    :param filename: filename for sprite data
+    :param scale: scaling for sprite.
+    :param name: player name to attach to the coin
+    :param lives: number of lives the player has (equals number of tickets bought).
+    :return: none
+    """
+
     def __init__(self, filename: str = None, scale: float = 1, name: str = None, lives: int = 0):
         # Set up parent class
         super().__init__(filename, scale)
@@ -66,6 +113,10 @@ class MyCoin(arcade.Sprite):
 
 
 class PlayerCharacter(arcade.Sprite):
+    """
+    Characteristics for Mabel. Mabel is the figure who collects the coins.
+    """
+
     def __init__(self):
 
         # Set up parent class
@@ -134,8 +185,6 @@ class PlayerCharacter(arcade.Sprite):
         theta = random.randint(-90, 90)
         x_changed = False
 
-        print(f'Theta  :{theta:10}  x:{self.change_x:+12.10f} y:{self.change_y:+12.10f} l:{self.left:+12.10f} r:{self.right:+12.10f} t:{self.top:+12.10f} b:{self.bottom:+12.10f}')
-
         # Change direction if end of screen
         if self.left < COIN_DIAMETER:
             # Hit left edge of screen. X velocity must be set positive, y velocity +ve or -ve.
@@ -144,7 +193,6 @@ class PlayerCharacter(arcade.Sprite):
             self.change_x = MABEL_SPEED * math.cos(math.radians(theta))
             self.change_y = MABEL_SPEED * math.sin(math.radians(theta))
             x_changed = True
-            print("Left")
         elif self.right > SCREEN_WIDTH - COIN_DIAMETER:
             # Hit right edge of screen. X velocity must be set negative, y velocity +ve or -ve.
             # Angle between 90 and -90 (quadrant 2 and 3, ⊂)
@@ -152,18 +200,18 @@ class PlayerCharacter(arcade.Sprite):
             self.change_x = MABEL_SPEED * math.cos(math.radians(theta + 180))
             self.change_y = MABEL_SPEED * math.sin(math.radians(theta + 180))
             x_changed = True
-            print("Right")
 
-        x_changed = False
+        # x_changed = False
 
         if self.top > SCREEN_HEIGHT - COIN_DIAMETER:
             # Hit right edge of screen. Y velocity must be set negative, X velocity +ve or -ve.
             # Angle between 180 and 0 (quadrant 3 and 4 ⋃)
             # Subtract 90 degrees from the angle
-            print("Up")
             if x_changed:
+                # If x already changed, only update y
                 self.change_y = -1 * abs(self.change_y)
             else:
+                # Otherwise update both x and y
                 self.change_x = MABEL_SPEED * math.cos(math.radians(theta - 90))
                 self.change_y = MABEL_SPEED * math.sin(math.radians(theta - 90))
 
@@ -171,61 +219,26 @@ class PlayerCharacter(arcade.Sprite):
             # Hit bottom edge of screen. Y velocity must be set positive, X velocity +ve or -ve.
             # Angle between 0 and 180 (quadrant 1 and 2, ⋂ )
             # Add 90 degrees to the angle
-            print("Down")
             if x_changed:
+                # If x already changed, only update y
                 self.change_y = abs(self.change_y)
             else:
+                # Otherwise update both x and y
                 self.change_x = MABEL_SPEED * math.cos(math.radians(theta + 90))
                 self.change_y = MABEL_SPEED * math.sin(math.radians(theta + 90))
 
         super(PlayerCharacter, self).update()
 
 
-class GameOverView(arcade.View):
-    """ View to show when game is over """
-
-    def __init__(self):
-        """ This is run once when we switch to this view """
-        super().__init__()
-        self.texture = arcade.load_texture("resources/images/game_over.png")
-
-        # Reset the viewport, necessary if we have a scrolling game and we need
-        # to reset the viewport back to the start so we can see what we draw.
-        arcade.set_viewport(0, SCREEN_WIDTH - 1, 0, SCREEN_HEIGHT - 1)
-        """ Load music and set flag that currently no music playing"""
-        self.sound_song = arcade.load_sound("./resources/sounds/Tarannos/Radar-MasterEffects.wav")
-        self.music_playing = Falseq
-
-    def on_draw(self):
-        """ Draw this view """
-        arcade.start_render()
-        self.texture.draw_sized(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2,
-                                SCREEN_WIDTH, SCREEN_HEIGHT)
-
-        """ When drawing for the first time, play sound"""
-        if not self.music_playing:
-            arcade.play_sound(self.sound_song)
-            self.music_playing = True
-
-    def on_mouse_press(self, _x, _y, _button, _modifiers):
-        """ If the user presses the mouse button, exit the game. """
-        arcade.stop_sound(self.sound_song)
-        self.window.close()
-        """"exit(0)"""
-
-
-class WinnersView(arcade.View):
+class WinnersView(MyView):
     """ View to show winners """
 
-    def __init__(self, winners):
+    def __init__(self, config: MyConfig, next_view: MyView=None):
         """ Set up the game and initialize the variables. """
-        # super().__init__(width, height, title)
-        super().__init__()
-        self.winners = winners
+        super().__init__(config, next_view)
 
         """ Load music and set flag that currently no music playing"""
-        self.sound_song = arcade.load_sound(
-            "./resources/sounds/Dark Fantasy Studio- Superheroes/mp3/Dark Fantasy Studio- Iron knight (seamless).mp3")
+        self.sound_song = arcade.load_sound(WINNERS_SOUND)
         self.music_playing = False
 
     def on_show(self):
@@ -242,8 +255,9 @@ class WinnersView(arcade.View):
         arcade.draw_text("Winners Screen", SCREEN_WIDTH / 2, 14 * SCREEN_HEIGHT / 16,
                          arcade.color.WHITE, font_size=50, anchor_x="center")
 
+        """ List all the winners """
         i = 12
-        for winner in self.winners:
+        for winner in self.config.winners:
             arcade.draw_text(winner, SCREEN_WIDTH / 8, i * SCREEN_HEIGHT / 16,
                              arcade.color.WHITE, font_size=20, anchor_x="left")
             i -= 1
@@ -258,24 +272,162 @@ class WinnersView(arcade.View):
 
     def on_mouse_press(self, _x, _y, _button, _modifiers):
 
+        """If the user presses the mouse button, show closing credits. """
+        arcade.stop_sound(self.sound_song)
+        #next_view = GameOverView()
+        #next_view.setup()
+        self.next_view.setup()
+        self.window.show_view(self.next_view)
+
+class GameOverView(MyView):
+    """ View to show closing credits when game is over """
+
+    def __init__(self, config: MyConfig, next_view: MyView=None):
+        """ This is run once when we switch to this view """
+        super().__init__(config, next_view)
+
+        # Reset the viewport, necessary if we have a scrolling game and we need
+        # to reset the viewport back to the start so we can see what we draw.
+        arcade.set_viewport(0, SCREEN_WIDTH - 1, 0, SCREEN_HEIGHT - 1)
+        """ Load music and set flag that currently no music playing"""
+        self.sound_song = arcade.load_sound(GAME_OVER_SOUND)
+        self.music_playing = False
+
+        self.text_color = arcade.color.WHITE
+
+        # Font sizes for title, song credits, artist attribution and production credits
+        self.title_font_size = 50.0
+        self.production_font_size = 30.0
+        self.credit_font_size = 20.0
+        self.attribution_font_size = 15.0
+        self.leading = 6  # gap between lines
+
+
+    def setup(self):
+        self.credits_list = arcade.SpriteList()
+
+        # self.centre_text_on_screen("Credits", 14 * SCREEN_HEIGHT / 16, text_color, title_font_size)
+
+        self.credits_list.append(self.credit_contribution("IRON KNIGHT and PIXEL", 13 * SCREEN_HEIGHT / 16))
+        self.credits_list.append(self.credit_attribution("written and performed by Nicolas Jeudy, Dark Fantasy Studio.",
+                                13 * SCREEN_HEIGHT / 16 - self.leading - self.attribution_font_size))
+
+        self.credits_list.append(self.credit_contribution("RADAR", 11 * SCREEN_HEIGHT / 16))
+        self.credits_list.append(self.credit_attribution("written and performed by Tarannos, Welsh Thunder Records.",
+                                11 * SCREEN_HEIGHT / 16 - self.leading - self.attribution_font_size))
+
+        self.credits_list.append(self.credit_contribution("DON'T BELIEVE IN LOVE ", 9 * SCREEN_HEIGHT / 16))
+        self.credits_list.append(self.credit_attribution("Written by Tarannos and performed by Tarannos, Ray and Sonja Jenkins.",
+                                9 * SCREEN_HEIGHT / 16 - self.leading - self.attribution_font_size))
+        self.credits_list.append(self.credit_attribution("A Ray Jenkins Production for Welsh Thunder Records.",
+                                9 * SCREEN_HEIGHT / 16 - 2 * self.leading - 2 * self.attribution_font_size))
+
+        self.credits_list.append(self.credit_contribution("Concept, animation and design by David Jenkins", 6 * SCREEN_HEIGHT / 16))
+
+        self.credits_list.append(self.credit_contribution("Debugging by Jana Leible", 5 * SCREEN_HEIGHT / 16))
+
+        self.credits_list.append(self.credit_contribution("Sprites by Kenney", 4 * SCREEN_HEIGHT / 16))
+
+        self.credits_list.append(self.credit_production("A PYTHON ARCADE PRODUCTION", 2 * SCREEN_HEIGHT / 16))
+
+
+        # Let the text move upwards
+        for sprite in self.credits_list:
+            sprite.change_x = 0
+            sprite.change_y = 1
+
+    def on_show(self):
+        """ This is run once when we switch to this view """
+        arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
+
+        # Reset the viewport, necessary if we have a scrolling game and we need
+        # to reset the viewport back to the start so we can see what we draw.
+        #arcade.set_viewport(0, SCREEN_WIDTH - 1, 0, SCREEN_HEIGHT - 1)
+        arcade.set_viewport(0, SCREEN_WIDTH - 1, 0, 14 * SCREEN_HEIGHT / 16)
+
+    def centre_text_on_screen(self, text: str, start_y: float, color: arcade.Color, font_size: float,
+                              width: int = 900) -> arcade.Sprite:
+        """
+        :param text: – Text to draw
+        :param start_y: – y coordinate of the lower-left point to start drawing text
+        :param color:  – Color of the text
+        :param font_size: – Size of the text
+        :param width: – Width of the text-box for the text to go into. Used with alignment.
+        """
+        sprite = arcade.draw_text(text, SCREEN_WIDTH / 2, start_y, color, font_size, width, align="center",
+                                  anchor_x="center", anchor_y="baseline")
+        return sprite
+
+    def title(self, text: str) -> arcade.Sprite:
+        sprite = self.centre_text_on_screen(text, 14 * SCREEN_HEIGHT / 16, self.text_color, self.title_font_size,
+                                            width=900)
+        return sprite
+
+    def credit_contribution(self, text: str, start_y: float, width: int = 900) -> arcade.Sprite:
+        sprite = self.centre_text_on_screen(text, start_y, self.text_color, self.credit_font_size, width)
+        return sprite
+
+    def credit_attribution(self, text: str, start_y: float, width: int = 900) -> arcade.Sprite:
+        sprite = self.centre_text_on_screen(text, start_y, self.text_color, self.attribution_font_size, width)
+        return sprite
+
+    def credit_production(self, text: str, start_y: float, width: int = 900) -> arcade.Sprite:
+        sprite = self.centre_text_on_screen(text, start_y, self.text_color, self.production_font_size, width)
+        return sprite
+
+    def on_draw(self):
+
+        #self.window.set_viewport(0, SCREEN_WIDTH - 1, 0, SCREEN_HEIGHT - 1)
+
+        """ Draw this view """
+        # This command has to happen before we start drawing
+        arcade.start_render()
+        self.title("Credits")
+
+        self.credit_contribution("Click anywhere to end", SCREEN_HEIGHT / 16)
+
+        #self.window.set_viewport(0, SCREEN_WIDTH - 1, SCREEN_HEIGHT / 16, 14 * SCREEN_HEIGHT / 16)
+
+        # Let the text move upwards
+        for sprite in self.credits_list:
+            if sprite.top > 14 * SCREEN_HEIGHT / 16:
+                sprite.remove_from_sprite_lists()
+
+        # Draw all the sprites.
+        self.credits_list.draw()
+
+        """ When drawing for the first time, play sound"""
+        if not self.music_playing:
+            arcade.play_sound(self.sound_song)
+            self.music_playing = True
+
+    def on_update(self, delta_time):
+        """ Movement and game logic """
+
+        # Move the player
+        self.credits_list.update()
+
+    def on_mouse_press(self, _x, _y, _button, _modifiers):
         """If the user presses the mouse button, end the game. """
         arcade.stop_sound(self.sound_song)
         self.window.close()
 
 
-class InstructionView(arcade.View):
+class InstructionView(MyView):
     """ View to show instructions """
 
-    def __init__(self, df_lose):
+    def __init__(self, config: MyConfig, next_view: MyView=None):
         """ Set up the game and initialize the variables. """
         # super().__init__(width, height, title)
-        super().__init__()
-        self.df_lose = df_lose
+        super().__init__(config, next_view)
 
         """ Load music and set flag that currently no music playing"""
-        self.sound_song = arcade.load_sound(
-            "./resources/sounds/Dark Fantasy Studio- Superheroes/mp3/Dark Fantasy Studio- Iron knight (seamless).mp3")
+        self.sound_song = arcade.load_sound(INSTRUCTION_SOUND)
         self.music_playing = False
+
+    def setup(self):
+        """ This is run once when we switch to this view """
+        arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
 
     def on_show(self):
         """ This is run once when we switch to this view """
@@ -294,7 +446,7 @@ class InstructionView(arcade.View):
         arcade.draw_text("Mabel sammelt die Lose ein. Ihr habt alle so viele Leben, wie ihr Lose gekauft habt.",
                          SCREEN_WIDTH / 8, 12 * SCREEN_HEIGHT / 16,
                          arcade.color.WHITE, font_size=20, anchor_x="left")
-        arcade.draw_text("Ihr fängt irgendwo zufällig verteilt auf der Wiese an.", SCREEN_WIDTH / 8,
+        arcade.draw_text("Ihr fangt irgendwo zufällig verteilt auf der Wiese an.", SCREEN_WIDTH / 8,
                          11 * SCREEN_HEIGHT / 16,
                          arcade.color.WHITE, font_size=20, anchor_x="left")
         arcade.draw_text("Wenn ihr noch Leben habt, erscheint euer Losmünze wieder irgendwo zufällig.",
@@ -315,20 +467,20 @@ class InstructionView(arcade.View):
             self.music_playing = True
 
     def on_mouse_press(self, _x, _y, _button, _modifiers):
-        """If the user presses the mouse button, start the game. """
+        """If the user presses the mouse button, play the game. """
+
         arcade.stop_sound(self.sound_song)
-        next_view = GameView(self.df_lose)
-        next_view.setup()
-        self.window.show_view(next_view)
+        #next_view = GameView(self.lose)
+        self.next_view.setup()
+        self.window.show_view(self.next_view)
 
 
-class GameView(arcade.View):
+class GameView(MyView):
     """ Main application class. """
 
-    def __init__(self, df_lose):
+    def __init__(self, config: MyConfig, next_view: MyView=None):
         """ Set up the game and initialize the variables. """
-        # super().__init__(width, height, title)
-        super().__init__()
+        super().__init__(config, next_view)
 
         # No mouse cursor
         self.window.set_mouse_visible(False)
@@ -338,15 +490,12 @@ class GameView(arcade.View):
         self.coin_list = None
 
         """ Load music and set flag that currently no music playing"""
-        self.sound_song = arcade.load_sound(
-            "./resources/sounds/Dark Fantasy Studio- PIXEL Faster stronger harder/mp3/5- Dark Fantasy Studio - Demolition race.mp3")
-        self.sound_song = arcade.load_sound(
-            "./resources/sounds/Tarannos/She-Dont-Believe-In-Love.mp3")
+        self.sound_song = arcade.load_sound(GAME_SOUND)
         self.music_playing = False
 
-        self.df_lose = df_lose
+        self.lose = config.lose
 
-        self.max_coins = len(df_lose.index)
+        self.max_coins = len(config.lose.index)
 
         if is_debug():
             print("Anzahl Lose: ", self.max_coins, "wurde für Debug runtergesetzt. Jetzt: ", DEBUG_COIN_COUNT)
@@ -374,14 +523,16 @@ class GameView(arcade.View):
         self.player_list.append(self.player)
 
         for i in range(self.max_coins):
-            l_name = self.df_lose.iloc[i]["Name"]
-            l_lose = self.df_lose.iloc[i]["Lose"]
+            l_name = self.lose.iloc[i]["Name"]
+            l_lose = self.lose.iloc[i]["Lose"]
             coin = MyCoin(":resources:images/items/gold_1.png",
                           scale=0.5, name=l_name, lives=l_lose)
             coin.center_x = COIN_DIAMETER + random.randrange(SCREEN_WIDTH - 2 * COIN_DIAMETER)
             coin.center_y = COIN_DIAMETER + random.randrange(SCREEN_HEIGHT - 2 * COIN_DIAMETER)
 
             self.coin_list.append(coin)
+
+        self.score = len(self.coin_list)
 
         # Set the background color
         arcade.set_background_color(arcade.color.AMAZON)
@@ -461,15 +612,22 @@ class GameView(arcade.View):
             else:
                 coin.remove_from_sprite_lists()
 
-            self.score += 1
+        self.score = len(self.coin_list)
 
         """Stop when there are 10 coins left (i.e. 10 winners)"""
         if len(self.coin_list) <= 10:
             winners = [obj.name for obj in self.coin_list]
+
+            # Save winners to file
+            with open('winners.txt', "w") as f:
+                for name in winners:
+                    f.write(f"{name}\n")
+
             arcade.stop_sound(self.sound_song)
-            next_view = WinnersView(winners)
+            self.config.winners = winners
+            # next_view = WinnersView(winners)
             self.window.set_mouse_visible(True)
-            self.window.show_view(next_view)
+            self.window.show_view(self.next_view)
 
 
 def main():
@@ -486,11 +644,19 @@ def main():
     print(os.getcwd())
 
     df_lose = pd.read_excel(args.excelfile)
+    config = MyConfig(df_lose)
 
     window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
-    start_view = InstructionView(df_lose)
+
+    # Set up window sequence
+    # Start with Instruction View -> GameView -> WinnersView -> GameOverView
+    game_over_view = GameOverView(config)
+    game_over_view.setup()
+    winners_view = WinnersView(config, game_over_view)
+    game_view = GameView(config, winners_view)
+    start_view = InstructionView(config, game_view)
+    start_view.setup()
     window.show_view(start_view)
-    # start_view.setup()
     arcade.run()
 
     print("Finished")
