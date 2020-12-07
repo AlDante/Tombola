@@ -3,6 +3,7 @@
 Weihnachtstombolaspiel
 
 Spiel zur Ziehung der Weihnachtstombola für eXXcellent solutions
+NB: Beim spielen auch sound teilen in Teams.
 
 Code and music copyright David Jenkins, 2020, except works by Dark Fantasy Studio, copyright Nicolas Jeudy / DARK FANTASY STUDIO 
 
