@@ -8,6 +8,19 @@ Code and music copyright David Jenkins, 2020, except works by Dark Fantasy Studi
 
 All rights reserved 
 
+#Setup
+
+1. Create a virtual environment. If on Windows, run the following
+```
+pip install virtualenv       # Skip if already installed.
+cd Tombola
+virtualenv venv
+```
+2. Install dependencies
+```
+source ./venv/Scripts/activate
+pip install -r requirements
+```
 
 #Input
 Parameter 
