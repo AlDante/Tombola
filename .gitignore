@@ -1,2 +1,4 @@
 venv/
 *.xlsx
+*.txt
+!requirements.txt
