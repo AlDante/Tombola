@@ -19,7 +19,7 @@ from pandas import DataFrame
 
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 800
-SCREEN_TITLE = "Weihnachtstombola 2020 - es kann nur eine(r) geben. Plus neun anderen."
+SCREEN_TITLE = "Weihnachtstombola 2020 - es kann nur eine(n) geben. Plus neun andere."
 
 IRON_KNIGHT = "./resources/sounds/Dark Fantasy Studio- Superheroes/mp3/" \
               "Dark Fantasy Studio- Iron knight (seamless).mp3"
@@ -658,7 +658,7 @@ def main():
     """ Main method """
 
     parser = argparse.ArgumentParser(description='Weihnachtstombola.')
-    parser.add_argument('-i', metavar='excelfile', dest='excelfile', type=str,
+    parser.add_argument('-i', metavar='excelfile', dest='excelfile', type=str, required=True,
                         help='Pfad zur Excel Datei, die die Namen und Lose enthält.')
 
     args = parser.parse_args()
