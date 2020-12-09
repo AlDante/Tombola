@@ -21,11 +21,17 @@ SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 800
 SCREEN_TITLE = "Weihnachtstombola 2020 - es kann nur eine(n) geben. Plus neun andere."
 
-WINNERS_SOUND = "./resources/sounds/Dark Fantasy Studio- Superheroes/mp3/Dark Fantasy Studio- Iron knight (seamless).mp3"
-GAME_OVER_SOUND = "./resources/sounds/Tarannos/Radar-MasterEffects.wav"
-GAME_SOUND = "./resources/sounds/Dark Fantasy Studio- PIXEL Faster stronger harder/mp3/5- Dark Fantasy Studio - Demolition race.mp3"
-GAME_SOUND2 = "./resources/sounds/Tarannos/She-Dont-Believe-In-Love.mp3"
-INSTRUCTION_SOUND = "./resources/sounds/Dark Fantasy Studio- Superheroes/mp3/Dark Fantasy Studio- Iron knight (seamless).mp3"
+IRON_KNIGHT = "./resources/sounds/Dark Fantasy Studio- Superheroes/mp3/" \
+              "Dark Fantasy Studio- Iron knight (seamless).mp3"
+RADAR = "./resources/sounds/Tarannos/Radar-MasterEffects.wav"
+DEMOLITION_RACE = "./resources/sounds/Dark Fantasy Studio- PIXEL Faster stronger harder/" \
+                  "mp3/5- Dark Fantasy Studio - Demolition race.mp3"
+DONT_BELIEVE_IN_LOVE = "./resources/sounds/Tarannos/She-Dont-Believe-In-Love.mp3"
+
+INSTRUCTION_SOUND = IRON_KNIGHT
+GAME_SOUND = DEMOLITION_RACE
+WINNERS_SOUND = RADAR
+GAME_OVER_SOUND = DONT_BELIEVE_IN_LOVE
 
 COIN_SCALE = 0.5
 # DEBUG_COIN_COUNT must be more than 10, otherwise game screen is never shown
@@ -70,7 +76,7 @@ def load_texture_pair(filename):
     ]
 
 
-class MyConfig():
+class MyConfig:
     """
     Configuration used by practically all views.
     :param lose: data frame of player names and number of lives
@@ -78,9 +84,15 @@ class MyConfig():
     :return: none
     """
 
-    def __init__(self, lose: DataFrame, winners: list = []):
+    def __init__(self, lose: DataFrame, winners: list = None):
         self.lose = lose
-        self.winners = winners
+
+        # Actually want an empty list as a default, but that leads to mutable errors
+        if winners is None:
+            self.winners = []
+        else:
+            self.winners = winners
+
 
 class MyView(arcade.View):
     """
@@ -94,6 +106,7 @@ class MyView(arcade.View):
         super().__init__()
         self.config = config
         self.next_view = next_view
+
 
 class MyCoin(arcade.Sprite):
     """
@@ -201,8 +214,6 @@ class PlayerCharacter(arcade.Sprite):
             self.change_y = MABEL_SPEED * math.sin(math.radians(theta + 180))
             x_changed = True
 
-        # x_changed = False
-
         if self.top > SCREEN_HEIGHT - COIN_DIAMETER:
             # Hit right edge of screen. Y velocity must be set negative, X velocity +ve or -ve.
             # Angle between 180 and 0 (quadrant 3 and 4 ⋃)
@@ -233,7 +244,7 @@ class PlayerCharacter(arcade.Sprite):
 class WinnersView(MyView):
     """ View to show winners """
 
-    def __init__(self, config: MyConfig, next_view: MyView=None):
+    def __init__(self, config: MyConfig, next_view: MyView = None):
         """ Set up the game and initialize the variables. """
         super().__init__(config, next_view)
 
@@ -274,15 +285,14 @@ class WinnersView(MyView):
 
         """If the user presses the mouse button, show closing credits. """
         arcade.stop_sound(self.sound_song)
-        #next_view = GameOverView()
-        #next_view.setup()
         self.next_view.setup()
         self.window.show_view(self.next_view)
+
 
 class GameOverView(MyView):
     """ View to show closing credits when game is over """
 
-    def __init__(self, config: MyConfig, next_view: MyView=None):
+    def __init__(self, config: MyConfig, next_view: MyView = None):
         """ This is run once when we switch to this view """
         super().__init__(config, next_view)
 
@@ -301,7 +311,7 @@ class GameOverView(MyView):
         self.credit_font_size = 20.0
         self.attribution_font_size = 15.0
         self.leading = 6  # gap between lines
-
+        self.credits_list = None
 
     def setup(self):
         self.credits_list = arcade.SpriteList()
@@ -309,27 +319,38 @@ class GameOverView(MyView):
         # self.centre_text_on_screen("Credits", 14 * SCREEN_HEIGHT / 16, text_color, title_font_size)
 
         self.credits_list.append(self.credit_contribution("IRON KNIGHT and PIXEL", 13 * SCREEN_HEIGHT / 16))
-        self.credits_list.append(self.credit_attribution("written and performed by Nicolas Jeudy, Dark Fantasy Studio.",
-                                13 * SCREEN_HEIGHT / 16 - self.leading - self.attribution_font_size))
+        self.credits_list.append(self.credit_attribution("written and performed by Nicolas "
+                                                         "Jeudy, Dark Fantasy Studio.",
+                                                         13 * SCREEN_HEIGHT / 16 - self.leading
+                                                         - self.attribution_font_size))
 
         self.credits_list.append(self.credit_contribution("RADAR", 11 * SCREEN_HEIGHT / 16))
-        self.credits_list.append(self.credit_attribution("written and performed by Tarannos, Welsh Thunder Records.",
-                                11 * SCREEN_HEIGHT / 16 - self.leading - self.attribution_font_size))
+        self.credits_list.append(self.credit_attribution("written and performed by Tarannos, "
+                                                         "Welsh Thunder Records.",
+                                                         11 * SCREEN_HEIGHT / 16 - self.leading
+                                                         - self.attribution_font_size))
 
         self.credits_list.append(self.credit_contribution("DON'T BELIEVE IN LOVE ", 9 * SCREEN_HEIGHT / 16))
-        self.credits_list.append(self.credit_attribution("Written by Tarannos and performed by Tarannos, Ray and Sonja Jenkins.",
-                                9 * SCREEN_HEIGHT / 16 - self.leading - self.attribution_font_size))
-        self.credits_list.append(self.credit_attribution("A Ray Jenkins Production for Welsh Thunder Records.",
-                                9 * SCREEN_HEIGHT / 16 - 2 * self.leading - 2 * self.attribution_font_size))
+        self.credits_list.append(self.credit_attribution("Written by Tarannos and performed by "
+                                                         "Tarannos, Ray and Sonja Jenkins.",
+                                                         9 * SCREEN_HEIGHT / 16 - self.leading
+                                                         - self.attribution_font_size))
+        self.credits_list.append(self.credit_attribution("A Ray Jenkins Production for Welsh "
+                                                         "Thunder Records.",
+                                                         9 * SCREEN_HEIGHT / 16 -
+                                                         2 * self.leading -
+                                                         2 * self.attribution_font_size))
 
-        self.credits_list.append(self.credit_contribution("Concept, animation and design by David Jenkins", 6 * SCREEN_HEIGHT / 16))
+        self.credits_list.append(
+            self.credit_contribution("Concept, animation and design by David Jenkins",
+                                     6 * SCREEN_HEIGHT / 16))
 
-        self.credits_list.append(self.credit_contribution("Debugging by Jana Leible", 5 * SCREEN_HEIGHT / 16))
+        self.credits_list.append(self.credit_contribution("Debugging by Jana Leible",
+                                                          5 * SCREEN_HEIGHT / 16))
 
         self.credits_list.append(self.credit_contribution("Sprites by Kenney", 4 * SCREEN_HEIGHT / 16))
 
         self.credits_list.append(self.credit_production("A PYTHON ARCADE PRODUCTION", 2 * SCREEN_HEIGHT / 16))
-
 
         # Let the text move upwards
         for sprite in self.credits_list:
@@ -342,10 +363,11 @@ class GameOverView(MyView):
 
         # Reset the viewport, necessary if we have a scrolling game and we need
         # to reset the viewport back to the start so we can see what we draw.
-        #arcade.set_viewport(0, SCREEN_WIDTH - 1, 0, SCREEN_HEIGHT - 1)
+        # arcade.set_viewport(0, SCREEN_WIDTH - 1, 0, SCREEN_HEIGHT - 1)
         arcade.set_viewport(0, SCREEN_WIDTH - 1, 0, 14 * SCREEN_HEIGHT / 16)
 
-    def centre_text_on_screen(self, text: str, start_y: float, color: arcade.Color, font_size: float,
+    @staticmethod
+    def centre_text_on_screen(text: str, start_y: float, color: arcade.Color, font_size: float,
                               width: int = 900) -> arcade.Sprite:
         """
         :param text: – Text to draw
@@ -368,7 +390,8 @@ class GameOverView(MyView):
         return sprite
 
     def credit_attribution(self, text: str, start_y: float, width: int = 900) -> arcade.Sprite:
-        sprite = self.centre_text_on_screen(text, start_y, self.text_color, self.attribution_font_size, width)
+        sprite = self.centre_text_on_screen(text, start_y, self.text_color,
+                                            self.attribution_font_size, width)
         return sprite
 
     def credit_production(self, text: str, start_y: float, width: int = 900) -> arcade.Sprite:
@@ -377,7 +400,7 @@ class GameOverView(MyView):
 
     def on_draw(self):
 
-        #self.window.set_viewport(0, SCREEN_WIDTH - 1, 0, SCREEN_HEIGHT - 1)
+        # self.window.set_viewport(0, SCREEN_WIDTH - 1, 0, SCREEN_HEIGHT - 1)
 
         """ Draw this view """
         # This command has to happen before we start drawing
@@ -386,7 +409,7 @@ class GameOverView(MyView):
 
         self.credit_contribution("Click anywhere to end", SCREEN_HEIGHT / 16)
 
-        #self.window.set_viewport(0, SCREEN_WIDTH - 1, SCREEN_HEIGHT / 16, 14 * SCREEN_HEIGHT / 16)
+        # self.window.set_viewport(0, SCREEN_WIDTH - 1, SCREEN_HEIGHT / 16, 14 * SCREEN_HEIGHT / 16)
 
         # Let the text move upwards
         for sprite in self.credits_list:
@@ -416,7 +439,7 @@ class GameOverView(MyView):
 class InstructionView(MyView):
     """ View to show instructions """
 
-    def __init__(self, config: MyConfig, next_view: MyView=None):
+    def __init__(self, config: MyConfig, next_view: MyView = None):
         """ Set up the game and initialize the variables. """
         # super().__init__(width, height, title)
         super().__init__(config, next_view)
@@ -425,7 +448,8 @@ class InstructionView(MyView):
         self.sound_song = arcade.load_sound(INSTRUCTION_SOUND)
         self.music_playing = False
 
-    def setup(self):
+    @staticmethod
+    def setup():
         """ This is run once when we switch to this view """
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
 
@@ -470,7 +494,7 @@ class InstructionView(MyView):
         """If the user presses the mouse button, play the game. """
 
         arcade.stop_sound(self.sound_song)
-        #next_view = GameView(self.lose)
+        # next_view = GameView(self.lose)
         self.next_view.setup()
         self.window.show_view(self.next_view)
 
@@ -478,7 +502,7 @@ class InstructionView(MyView):
 class GameView(MyView):
     """ Main application class. """
 
-    def __init__(self, config: MyConfig, next_view: MyView=None):
+    def __init__(self, config: MyConfig, next_view: MyView = None):
         """ Set up the game and initialize the variables. """
         super().__init__(config, next_view)
 
