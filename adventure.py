@@ -12,6 +12,7 @@ import argparse
 import math
 import random
 import sys
+from typing import List, Tuple
 
 import arcade
 import pandas as pd
@@ -56,7 +57,7 @@ def is_debug():
     Can be overwritten to be always true to speed testing
     """
 
-    return True
+    # return True
     if getattr(sys, 'gettrace', None) is None:
         print('No sys.gettrace')
         return False
@@ -84,8 +85,9 @@ class MyConfig:
     :return: none
     """
 
-    def __init__(self, lose: DataFrame, winners: list = None):
+    def __init__(self, lose: DataFrame, prizes: List[str], winners: list = None):
         self.lose = lose
+        self.prizes = prizes
 
         # Actually want an empty list as a default, but that leads to mutable errors
         if winners is None:
@@ -268,8 +270,8 @@ class WinnersView(MyView):
 
         """ List all the winners """
         i = 12
-        for winner in self.config.winners:
-            arcade.draw_text(winner, SCREEN_WIDTH / 8, i * SCREEN_HEIGHT / 16,
+        for (winner, prize) in self.config.winners:
+            arcade.draw_text(f'{winner} - {prize}', SCREEN_WIDTH / 8, i * SCREEN_HEIGHT / 16,
                              arcade.color.WHITE, font_size=20, anchor_x="left")
             i -= 1
 
@@ -499,6 +501,14 @@ class InstructionView(MyView):
         self.window.show_view(self.next_view)
 
 
+def map_prizes_to_winners(winners: List[str], prizes: List[str]) -> List[Tuple[str, str]]:
+
+    random.shuffle(winners)
+    random.shuffle(prizes)
+
+    return list(zip(winners, prizes))
+
+
 class GameView(MyView):
     """ Main application class. """
 
@@ -577,8 +587,8 @@ class GameView(MyView):
             arcade.draw_text(coin.name, coin.center_x, coin.center_y, arcade.color.WHITE, 12)
 
         # Put the text on the screen.
-        output = f"Score: {self.score}"
-        arcade.draw_text(output, 10, 20, arcade.color.WHITE, 14)
+        output = f"{self.score}"
+        arcade.draw_text(output, 10, 20, arcade.color.WHITE, font_size=60 )
 
         """ When drawing for the first time, play sound"""
         if not self.music_playing:
@@ -610,6 +620,22 @@ class GameView(MyView):
     def on_update(self, delta_time):
         """ Movement and game logic """
 
+        """Stop when there are as many coins as prizes left (i.e. 10 winners)"""
+        if len(self.coin_list) <= len(self.config.prizes):
+            winners = [obj.name for obj in self.coin_list]
+            winners_with_prizes = map_prizes_to_winners(winners, self.config.prizes)
+
+            # Save winners to file
+            with open('winners.txt', "w") as f:
+                for (name, prize) in winners_with_prizes:
+                    f.write(f"{name} - {prize}\n")
+
+            arcade.stop_sound(self.sound_song)
+            self.config.winners = winners_with_prizes
+            # next_view = WinnersView(winners)
+            self.window.set_mouse_visible(True)
+            self.window.show_view(self.next_view)
+
         # Move the player
         self.player_list.update()
 
@@ -638,20 +664,13 @@ class GameView(MyView):
 
         self.score = len(self.coin_list)
 
-        """Stop when there are 10 coins left (i.e. 10 winners)"""
-        if len(self.coin_list) <= 10:
-            winners = [obj.name for obj in self.coin_list]
 
-            # Save winners to file
-            with open('winners.txt', "w") as f:
-                for name in winners:
-                    f.write(f"{name}\n")
+def read_prizes(prizes_file: str) -> List[str]:
 
-            arcade.stop_sound(self.sound_song)
-            self.config.winners = winners
-            # next_view = WinnersView(winners)
-            self.window.set_mouse_visible(True)
-            self.window.show_view(self.next_view)
+    with open(prizes_file, 'r') as file:
+        prizes = file.readlines()
+
+    return prizes
 
 
 def main():
@@ -660,6 +679,8 @@ def main():
     parser = argparse.ArgumentParser(description='Weihnachtstombola.')
     parser.add_argument('-i', metavar='excelfile', dest='excelfile', type=str, required=True,
                         help='Pfad zur Excel Datei, die die Namen und Lose enthält.')
+    parser.add_argument('-p', metavar='prizes', dest='prizes', type=str, required=True,
+                        help='Pfad zu einer .txt-Datei, die die Preise enthält.')
 
     args = parser.parse_args()
     print(args.excelfile)
@@ -668,7 +689,8 @@ def main():
     print(os.getcwd())
 
     df_lose = pd.read_excel(args.excelfile)
-    config = MyConfig(df_lose)
+    prizes = read_prizes(args.prizes)
+    config = MyConfig(df_lose, prizes)
 
     window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
 
