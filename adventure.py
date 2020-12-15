@@ -17,6 +17,7 @@ from typing import List, Tuple
 import arcade
 import pandas as pd
 from pandas import DataFrame
+from pyglet import media
 
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 800
@@ -84,6 +85,8 @@ class MyConfig:
     :param winners: list of winners, filled at end of game
     :return: none
     """
+
+    volume: float  # Volume of the sound, between 0 and 1
 
     def __init__(self, lose: DataFrame, prizes: List[str], winners: list = None):
         self.lose = lose
@@ -252,7 +255,7 @@ class WinnersView(MyView):
 
         """ Load music and set flag that currently no music playing"""
         self.sound_song = arcade.load_sound(WINNERS_SOUND)
-        self.music_playing = False
+        self.music_playing: media.Player = None
 
     def on_show(self):
         """ This is run once when we switch to this view """
@@ -280,13 +283,12 @@ class WinnersView(MyView):
 
         """ When drawing for the first time, play sound"""
         if not self.music_playing:
-            arcade.play_sound(self.sound_song)
-            self.music_playing = True
+            self.music_playing = self.sound_song.play(self.config.volume, loop=True)
 
     def on_mouse_press(self, _x, _y, _button, _modifiers):
 
         """If the user presses the mouse button, show closing credits. """
-        arcade.stop_sound(self.sound_song)
+        self.sound_song.stop(self.music_playing)
         self.next_view.setup()
         self.window.show_view(self.next_view)
 
@@ -303,7 +305,7 @@ class GameOverView(MyView):
         arcade.set_viewport(0, SCREEN_WIDTH - 1, 0, SCREEN_HEIGHT - 1)
         """ Load music and set flag that currently no music playing"""
         self.sound_song = arcade.load_sound(GAME_OVER_SOUND)
-        self.music_playing = False
+        self.music_playing: media.Player = None
 
         self.text_color = arcade.color.WHITE
 
@@ -423,8 +425,7 @@ class GameOverView(MyView):
 
         """ When drawing for the first time, play sound"""
         if not self.music_playing:
-            arcade.play_sound(self.sound_song)
-            self.music_playing = True
+            self.music_playing = self.sound_song.play(self.config.volume, loop=True)
 
     def on_update(self, delta_time):
         """ Movement and game logic """
@@ -434,7 +435,7 @@ class GameOverView(MyView):
 
     def on_mouse_press(self, _x, _y, _button, _modifiers):
         """If the user presses the mouse button, end the game. """
-        arcade.stop_sound(self.sound_song)
+        self.sound_song.stop(self.music_playing)
         self.window.close()
 
 
@@ -448,7 +449,7 @@ class InstructionView(MyView):
 
         """ Load music and set flag that currently no music playing"""
         self.sound_song = arcade.load_sound(INSTRUCTION_SOUND)
-        self.music_playing = False
+        self.music_playing: media.Player = None
 
     @staticmethod
     def setup():
@@ -488,14 +489,13 @@ class InstructionView(MyView):
                          arcade.color.WHITE, font_size=20, anchor_x="center")
 
         """ When drawing for the first time, play sound"""
-        if not self.music_playing:
-            arcade.play_sound(self.sound_song)
-            self.music_playing = True
+        if self.music_playing is None:
+            self.music_playing = self.sound_song.play(volume=self.config.volume)
 
     def on_mouse_press(self, _x, _y, _button, _modifiers):
         """If the user presses the mouse button, play the game. """
 
-        arcade.stop_sound(self.sound_song)
+        self.sound_song.stop(self.music_playing)
         # next_view = GameView(self.lose)
         self.next_view.setup()
         self.window.show_view(self.next_view)
@@ -525,7 +525,7 @@ class GameView(MyView):
 
         """ Load music and set flag that currently no music playing"""
         self.sound_song = arcade.load_sound(GAME_SOUND)
-        self.music_playing = False
+        self.music_playing: media.Player = None
 
         self.lose = config.lose
 
@@ -588,34 +588,11 @@ class GameView(MyView):
 
         # Put the text on the screen.
         output = f"{self.score}"
-        arcade.draw_text(output, 10, 20, arcade.color.WHITE, font_size=60 )
+        arcade.draw_text(output, 10, 20, arcade.color.WHITE, font_size=60)
 
         """ When drawing for the first time, play sound"""
-        if not self.music_playing:
-            arcade.play_sound(self.sound_song)
-            self.music_playing = True
-
-    def on_key_press(self, key, modifiers):
-        """
-        Called whenever a key is pressed.
-        """
-        if key == arcade.key.UP:
-            self.player.change_y = MOVEMENT_SPEED
-        elif key == arcade.key.DOWN:
-            self.player.change_y = -MOVEMENT_SPEED
-        elif key == arcade.key.LEFT:
-            self.player.change_x = -MOVEMENT_SPEED
-        elif key == arcade.key.RIGHT:
-            self.player.change_x = MOVEMENT_SPEED
-
-    def on_key_release(self, key, modifiers):
-        """
-        Called when the user releases a key.
-        """
-        if key == arcade.key.UP or key == arcade.key.DOWN:
-            self.player.change_y = 0
-        elif key == arcade.key.LEFT or key == arcade.key.RIGHT:
-            self.player.change_x = 0
+        if self.music_playing is None:
+            self.music_playing = self.sound_song.play(self.config.volume, loop=True)
 
     def on_update(self, delta_time):
         """ Movement and game logic """
@@ -630,7 +607,7 @@ class GameView(MyView):
                 for (name, prize) in winners_with_prizes:
                     f.write(f"{name} - {prize}\n")
 
-            arcade.stop_sound(self.sound_song)
+            self.sound_song.stop(self.music_playing)
             self.config.winners = winners_with_prizes
             # next_view = WinnersView(winners)
             self.window.set_mouse_visible(True)
@@ -691,6 +668,7 @@ def main():
     df_lose = pd.read_excel(args.excelfile)
     prizes = read_prizes(args.prizes)
     config = MyConfig(df_lose, prizes)
+    config.volume = 0.01
 
     window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
 
