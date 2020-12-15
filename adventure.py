@@ -85,6 +85,8 @@ class MyConfig:
     :return: none
     """
 
+    volume: float # Volume of the sound, between 0 and 1
+
     def __init__(self, lose: DataFrame, prizes: List[str], winners: list = None):
         self.lose = lose
         self.prizes = prizes
@@ -280,7 +282,7 @@ class WinnersView(MyView):
 
         """ When drawing for the first time, play sound"""
         if not self.music_playing:
-            arcade.play_sound(self.sound_song)
+            arcade.play_sound(self.sound_song, self.config.volume)
             self.music_playing = True
 
     def on_mouse_press(self, _x, _y, _button, _modifiers):
@@ -423,7 +425,7 @@ class GameOverView(MyView):
 
         """ When drawing for the first time, play sound"""
         if not self.music_playing:
-            arcade.play_sound(self.sound_song)
+            arcade.play_sound(self.sound_song, self.config.volume)
             self.music_playing = True
 
     def on_update(self, delta_time):
@@ -489,7 +491,7 @@ class InstructionView(MyView):
 
         """ When drawing for the first time, play sound"""
         if not self.music_playing:
-            arcade.play_sound(self.sound_song)
+            arcade.play_sound(self.sound_song, self.config.volume)
             self.music_playing = True
 
     def on_mouse_press(self, _x, _y, _button, _modifiers):
@@ -592,7 +594,7 @@ class GameView(MyView):
 
         """ When drawing for the first time, play sound"""
         if not self.music_playing:
-            arcade.play_sound(self.sound_song)
+            arcade.play_sound(self.sound_song, self.config.volume)
             self.music_playing = True
 
     def on_key_press(self, key, modifiers):
@@ -635,6 +637,11 @@ class GameView(MyView):
             # next_view = WinnersView(winners)
             self.window.set_mouse_visible(True)
             self.window.show_view(self.next_view)
+
+        """ If the sound has stopped because the song ended, restart sound """
+        if not self.music_playing:
+            arcade.play_sound(self.sound_song, self.config.volume)
+            self.music_playing = True
 
         # Move the player
         self.player_list.update()
@@ -691,6 +698,7 @@ def main():
     df_lose = pd.read_excel(args.excelfile)
     prizes = read_prizes(args.prizes)
     config = MyConfig(df_lose, prizes)
+    config.volume = 0.01
 
     window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
 
