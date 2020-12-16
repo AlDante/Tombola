@@ -19,8 +19,8 @@ import pandas as pd
 from pandas import DataFrame
 from pyglet import media
 
-SCREEN_WIDTH = 1200
-SCREEN_HEIGHT = 800
+SCREEN_WIDTH = 1000
+SCREEN_HEIGHT = 600
 SCREEN_TITLE = "Weihnachtstombola 2020 - es kann nur eine(n) geben. Plus neun andere."
 
 IRON_KNIGHT = "./resources/sounds/Dark Fantasy Studio- Superheroes/mp3/" \
@@ -43,7 +43,7 @@ CHARACTER_SCALING = 1
 COIN_DIAMETER = 10
 
 # How fast to move, and how fast to run the animation
-MOVEMENT_SPEED = 5
+MOVEMENT_SPEED = 8
 UPDATES_PER_FRAME = 5
 MABEL_SPEED = MOVEMENT_SPEED
 
@@ -51,6 +51,8 @@ MABEL_SPEED = MOVEMENT_SPEED
 RIGHT_FACING = 0
 LEFT_FACING = 1
 
+# Padding for the coins
+PADDING = 25
 
 def is_debug():
     """
@@ -319,47 +321,49 @@ class GameOverView(MyView):
 
     def setup(self):
         self.credits_list = arcade.SpriteList()
-
+        
+        self.credits_list.append(self.credit_contribution("\n" * 5, 14 * SCREEN_HEIGHT / 25))
+        
         # self.centre_text_on_screen("Credits", 14 * SCREEN_HEIGHT / 16, text_color, title_font_size)
 
-        self.credits_list.append(self.credit_contribution("IRON KNIGHT and PIXEL", 13 * SCREEN_HEIGHT / 16))
+        self.credits_list.append(self.credit_contribution("IRON KNIGHT and PIXEL", 13 * SCREEN_HEIGHT / 25))
         self.credits_list.append(self.credit_attribution("written and performed by Nicolas "
                                                          "Jeudy, Dark Fantasy Studio.",
-                                                         13 * SCREEN_HEIGHT / 16 - self.leading
+                                                         13 * SCREEN_HEIGHT / 25 - self.leading
                                                          - self.attribution_font_size))
 
-        self.credits_list.append(self.credit_contribution("RADAR", 11 * SCREEN_HEIGHT / 16))
+        self.credits_list.append(self.credit_contribution("RADAR", 11 * SCREEN_HEIGHT / 25))
         self.credits_list.append(self.credit_attribution("written and performed by Tarannos, "
                                                          "Welsh Thunder Records.",
-                                                         11 * SCREEN_HEIGHT / 16 - self.leading
+                                                         11 * SCREEN_HEIGHT / 25 - self.leading
                                                          - self.attribution_font_size))
 
-        self.credits_list.append(self.credit_contribution("DON'T BELIEVE IN LOVE ", 9 * SCREEN_HEIGHT / 16))
+        self.credits_list.append(self.credit_contribution("DON'T BELIEVE IN LOVE ", 9 * SCREEN_HEIGHT / 25))
         self.credits_list.append(self.credit_attribution("Written by Tarannos and performed by "
                                                          "Tarannos, Ray and Sonja Jenkins.",
-                                                         9 * SCREEN_HEIGHT / 16 - self.leading
+                                                         9 * SCREEN_HEIGHT / 25 - self.leading
                                                          - self.attribution_font_size))
         self.credits_list.append(self.credit_attribution("A Ray Jenkins Production for Welsh "
                                                          "Thunder Records.",
-                                                         9 * SCREEN_HEIGHT / 16 -
+                                                         9 * SCREEN_HEIGHT / 25 -
                                                          2 * self.leading -
                                                          2 * self.attribution_font_size))
 
         self.credits_list.append(
             self.credit_contribution("Concept, animation and design by David Jenkins",
-                                     6 * SCREEN_HEIGHT / 16))
+                                     6 * SCREEN_HEIGHT / 25))
 
         self.credits_list.append(self.credit_contribution("Debugging by Jana Leible",
-                                                          5 * SCREEN_HEIGHT / 16))
+                                                          5 * SCREEN_HEIGHT / 25))
 
-        self.credits_list.append(self.credit_contribution("Sprites by Kenney", 4 * SCREEN_HEIGHT / 16))
+        self.credits_list.append(self.credit_contribution("Sprites by Kenney", 4 * SCREEN_HEIGHT / 25))
 
-        self.credits_list.append(self.credit_production("A PYTHON ARCADE PRODUCTION", 2 * SCREEN_HEIGHT / 16))
+        self.credits_list.append(self.credit_production("A PYTHON ARCADE PRODUCTION", 2 * SCREEN_HEIGHT / 25))
 
         # Let the text move upwards
         for sprite in self.credits_list:
             sprite.change_x = 0
-            sprite.change_y = 1
+            sprite.change_y = 0.5
 
     def on_show(self):
         """ This is run once when we switch to this view """
@@ -561,8 +565,8 @@ class GameView(MyView):
             l_lose = self.lose.iloc[i]["Lose"]
             coin = MyCoin(":resources:images/items/gold_1.png",
                           scale=0.5, name=l_name, lives=l_lose)
-            coin.center_x = COIN_DIAMETER + random.randrange(SCREEN_WIDTH - 2 * COIN_DIAMETER)
-            coin.center_y = COIN_DIAMETER + random.randrange(SCREEN_HEIGHT - 2 * COIN_DIAMETER)
+            coin.center_x = COIN_DIAMETER + random.randrange(PADDING, (SCREEN_WIDTH - 2 * COIN_DIAMETER) - PADDING)
+            coin.center_y = COIN_DIAMETER + random.randrange(PADDING, (SCREEN_HEIGHT - 2 * COIN_DIAMETER) - PADDING)
 
             self.coin_list.append(coin)
 
@@ -626,8 +630,8 @@ class GameView(MyView):
         for coin in hit_list:
             coin.lives = coin.lives - 1
             if coin.lives > 0:
-                coin.center_x = COIN_DIAMETER + random.randrange(SCREEN_WIDTH - 2 * COIN_DIAMETER)
-                coin.center_y = COIN_DIAMETER + random.randrange(SCREEN_HEIGHT - 2 * COIN_DIAMETER)
+                coin.center_x = COIN_DIAMETER + random.randrange(PADDING, (SCREEN_WIDTH - 2 * COIN_DIAMETER) - PADDING)
+                coin.center_y = COIN_DIAMETER + random.randrange(PADDING, (SCREEN_HEIGHT - 2 * COIN_DIAMETER) - PADDING)
 
                 # Change colour when lives get low, but not initially to not show up people with only one ticket.
                 if coin.lives == 3:
