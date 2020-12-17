@@ -47,6 +47,8 @@ MOVEMENT_SPEED = 8
 UPDATES_PER_FRAME = 5
 MABEL_SPEED = MOVEMENT_SPEED
 
+PLAYER_SCALE = 1.2
+
 # Volume of the background music
 VOLUME = 0.01
 
@@ -187,7 +189,7 @@ class PlayerCharacter(arcade.Sprite):
         self.change_y = 0
 
         self.center_x, self.center_y = random_xy_position()
-        self.scale = 1
+        self.scale = PLAYER_SCALE
 
     def update_animation(self, delta_time: float = 1 / 60):
 
