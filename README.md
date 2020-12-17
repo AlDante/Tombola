@@ -9,7 +9,7 @@ Code and music copyright David Jenkins, 2020, except works by Dark Fantasy Studi
 
 All rights reserved 
 
-#Setup
+## Setup
 
 1. Create a virtual environment. If on Windows, run the following
 ```
@@ -23,12 +23,12 @@ source ./venv/Scripts/activate
 pip install -r requirements
 ```
 
-#Input
-Parameter 
+## Input
+Parameters 
 ```
--i file
+-i lose_file -p prizes_file
 ```
-Pfad zur Excel Datei, die die Namen und Lose enthält. e.g.
+[-i] Pfad zur Excel-Datei, die die Namen und Lose enthält. e.g.
 
 ```
 python adventure.py -i "../eXXcellent/Weihnachtsfeier/TombolaLose.xlsx
@@ -38,11 +38,13 @@ for the player, and the number of lives they have (= number of tickets, i.e. Los
 
 ![img.png](img.png)
 
-#Output
+[-p] Pfad zur .txt-Datei, die die Preise enthält (einen pro Zeile). Die Anzahl der Preise bestimmt die Anzahl der Gewinner.
+
+## Output
 
 File **winners.txt** contains the list of winners
 
-#If things go wrong
+## If things go wrong
 
 ```
 ( All settings in adventure.py)
