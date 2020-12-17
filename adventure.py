@@ -47,6 +47,9 @@ MOVEMENT_SPEED = 8
 UPDATES_PER_FRAME = 5
 MABEL_SPEED = MOVEMENT_SPEED
 
+# Volume of the background music
+VOLUME = 0.01
+
 # Constants used to track if the player is facing left or right
 RIGHT_FACING = 0
 LEFT_FACING = 1
@@ -513,15 +516,24 @@ def map_prizes_to_winners(winners: List[str], prizes: List[str]) -> List[Tuple[s
     return list(zip(winners, prizes))
 
 
+def random_coin_position() -> Tuple[int, int]:
+    return (
+        random.randrange(COIN_DIAMETER + PADDING, SCREEN_WIDTH - COIN_DIAMETER - PADDING),
+        random.randrange(COIN_DIAMETER + PADDING, SCREEN_HEIGHT - COIN_DIAMETER - PADDING)
+    )
+
+
 class GameView(MyView):
     """ Main application class. """
 
-    def __init__(self, config: MyConfig, next_view: MyView = None):
+    def __init__(self, config: MyConfig, next_view: MyView):
         """ Set up the game and initialize the variables. """
         super().__init__(config, next_view)
 
         # No mouse cursor
         self.window.set_mouse_visible(False)
+        # self.screen_width = screen_width
+        # self.screen_height = screen_height
 
         # Sprite lists
         self.player_list = None
@@ -565,8 +577,9 @@ class GameView(MyView):
             l_lose = self.lose.iloc[i]["Lose"]
             coin = MyCoin(":resources:images/items/gold_1.png",
                           scale=0.5, name=l_name, lives=l_lose)
-            coin.center_x = COIN_DIAMETER + random.randrange(PADDING, (SCREEN_WIDTH - 2 * COIN_DIAMETER) - PADDING)
-            coin.center_y = COIN_DIAMETER + random.randrange(PADDING, (SCREEN_HEIGHT - 2 * COIN_DIAMETER) - PADDING)
+            # coin.center_x = COIN_DIAMETER + random.randrange(PADDING, (SCREEN_WIDTH - 2 * COIN_DIAMETER) - PADDING)
+            # coin.center_y = COIN_DIAMETER + random.randrange(PADDING, (SCREEN_HEIGHT - 2 * COIN_DIAMETER) - PADDING)
+            coin.center_x, coin.center_y = random_coin_position()
 
             self.coin_list.append(coin)
 
@@ -630,8 +643,7 @@ class GameView(MyView):
         for coin in hit_list:
             coin.lives = coin.lives - 1
             if coin.lives > 0:
-                coin.center_x = COIN_DIAMETER + random.randrange(PADDING, (SCREEN_WIDTH - 2 * COIN_DIAMETER) - PADDING)
-                coin.center_y = COIN_DIAMETER + random.randrange(PADDING, (SCREEN_HEIGHT - 2 * COIN_DIAMETER) - PADDING)
+                coin.center_x, coin.center_y = random_coin_position()
 
                 # Change colour when lives get low, but not initially to not show up people with only one ticket.
                 if coin.lives == 3:
@@ -672,9 +684,16 @@ def main():
     df_lose = pd.read_excel(args.excelfile)
     prizes = read_prizes(args.prizes)
     config = MyConfig(df_lose, prizes)
-    config.volume = 0.01
+    config.volume = VOLUME
 
-    window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+    # window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+    window = arcade.Window(fullscreen=True, title=SCREEN_TITLE)
+
+    global SCREEN_HEIGHT, SCREEN_WIDTH
+
+    left, SCREEN_WIDTH, bottom, SCREEN_HEIGHT = window.get_viewport()
+    # SCREEN_WIDTH = screen_width
+    # SCREEN_HEIGHT = screen_height
 
     # Set up window sequence
     # Start with Instruction View -> GameView -> WinnersView -> GameOverView
