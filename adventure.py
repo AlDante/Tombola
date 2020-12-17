@@ -140,7 +140,7 @@ class PlayerCharacter(arcade.Sprite):
     Characteristics for Mabel. Mabel is the figure who collects the coins.
     """
 
-    def __init__(self):
+    def __init__(self, character: str = 'Mabel'):
 
         # Set up parent class
         super().__init__()
@@ -165,10 +165,12 @@ class PlayerCharacter(arcade.Sprite):
         # --- Load Textures ---
 
         # Images from Kenney.nl's Asset Pack 3
-        main_path = ":resources:images/animated_characters/female_adventurer/femaleAdventurer"
+        if character == 'Mabel':
+            main_path = ":resources:images/animated_characters/female_adventurer/femaleAdventurer"
+        elif character == 'Robin':
+            main_path = ":resources:images/animated_characters/male_adventurer/maleAdventurer"
         # main_path = ":resources:images/animated_characters/female_person/femalePerson"
         # main_path = ":resources:images/animated_characters/male_person/malePerson"
-        # main_path = ":resources:images/animated_characters/male_adventurer/maleAdventurer"
         # main_path = ":resources:images/animated_characters/zombie/zombie"
         # main_path = ":resources:images/animated_characters/robot/robot"
 
@@ -180,6 +182,12 @@ class PlayerCharacter(arcade.Sprite):
         for i in range(8):
             texture = load_texture_pair(f"{main_path}_walk{i}.png")
             self.walk_textures.append(texture)
+
+        self.change_x = MOVEMENT_SPEED
+        self.change_y = 0
+
+        self.center_x, self.center_y = random_xy_position()
+        self.scale = 1
 
     def update_animation(self, delta_time: float = 1 / 60):
 
@@ -516,7 +524,7 @@ def map_prizes_to_winners(winners: List[str], prizes: List[str]) -> List[Tuple[s
     return list(zip(winners, prizes))
 
 
-def random_coin_position() -> Tuple[int, int]:
+def random_xy_position() -> Tuple[int, int]:
     return (
         random.randrange(COIN_DIAMETER + PADDING, SCREEN_WIDTH - COIN_DIAMETER - PADDING),
         random.randrange(COIN_DIAMETER + PADDING, SCREEN_HEIGHT - COIN_DIAMETER - PADDING)
@@ -559,18 +567,10 @@ class GameView(MyView):
         self.player_list = arcade.SpriteList()
         self.coin_list = arcade.SpriteList()
 
-        # Set up the player
         self.score = 0
-        self.player = PlayerCharacter()
-        # self.player.velocity = (5,0)
-        self.player.change_x = MOVEMENT_SPEED
-        self.player.change_y = 0
 
-        self.player.center_x = SCREEN_WIDTH // 2
-        self.player.center_y = SCREEN_HEIGHT // 2
-        self.player.scale = 0.8
-
-        self.player_list.append(self.player)
+        # Set up the players
+        self.player_list.extend([PlayerCharacter('Mabel'), PlayerCharacter('Robin')])
 
         for i in range(self.max_coins):
             l_name = self.lose.iloc[i]["Name"]
@@ -579,7 +579,7 @@ class GameView(MyView):
                           scale=0.5, name=l_name, lives=l_lose)
             # coin.center_x = COIN_DIAMETER + random.randrange(PADDING, (SCREEN_WIDTH - 2 * COIN_DIAMETER) - PADDING)
             # coin.center_y = COIN_DIAMETER + random.randrange(PADDING, (SCREEN_HEIGHT - 2 * COIN_DIAMETER) - PADDING)
-            coin.center_x, coin.center_y = random_coin_position()
+            coin.center_x, coin.center_y = random_xy_position()
 
             self.coin_list.append(coin)
 
@@ -637,13 +637,15 @@ class GameView(MyView):
         self.player_list.update_animation()
 
         # Generate a list of all sprites that collided with the player.
-        hit_list = arcade.check_for_collision_with_list(self.player, self.coin_list)
+        hit_list = []
+        for player in self.player_list:
+            hit_list.extend(arcade.check_for_collision_with_list(player, self.coin_list))
 
         # Loop through each colliding sprite, remove it, and add to the score.
         for coin in hit_list:
             coin.lives = coin.lives - 1
             if coin.lives > 0:
-                coin.center_x, coin.center_y = random_coin_position()
+                coin.center_x, coin.center_y = random_xy_position()
 
                 # Change colour when lives get low, but not initially to not show up people with only one ticket.
                 if coin.lives == 3:
